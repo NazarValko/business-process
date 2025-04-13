@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  activemq:
+    image: rmohr/activemq:5.15.9
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    environment:
+      - ACTIVEMQ_CONFIG_QUEUES=personal-info-queue,address-queue,contacts-queue,storage-queue,DLQ.personal-info-queue,DLQ.address-queue,DLQ.contacts-queue,DLQ.storage-queue
+      - ACTIVEMQ_CONFIG_MINMEMORY=512
+      - ACTIVEMQ_CONFIG_MAXMEMORY=2048
+      - ACTIVEMQ_ADMIN_LOGIN=admin
+      - ACTIVEMQ_ADMIN_PASSWORD=admin
+    volumes:
+      - activemq-data:/opt/activemq/data
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8161" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  gateway-service:
+    build:
+      context: ./
+      dockerfile: gateway-service/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+    depends_on:
+      activemq:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  personal-info-service:
+    build:
+      context: ./
+      dockerfile: personal-info-service/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+    depends_on:
+      activemq:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  address-service:
+    build:
+      context: ./
+      dockerfile: address-service/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+    depends_on:
+      activemq:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  contacts-service:
+    build:
+      context: ./
+      dockerfile: contacts-service/Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+    depends_on:
+      activemq:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  storage-service:
+    build:
+      context: ./
+      dockerfile: storage-service/Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+    depends_on:
+      activemq:
+        condition: service_healthy
+    volumes:
+      - sqlite-data:/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  sqlite-data:
+  activemq-data:
