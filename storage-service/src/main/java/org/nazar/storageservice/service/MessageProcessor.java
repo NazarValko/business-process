@@ -24,12 +24,12 @@ public class MessageProcessor {
     @Transactional
     public void processMessage(ContactsClientData incomingData) {
         logger.info("Processing clientId: {}", incomingData.clientId());
-        saveWithCircuitBreaker(incomingData);
+        save(incomingData);
         logger.info("Processed clientId: {}", incomingData.clientId());
     }
 
     @CircuitBreaker(name = "dbOperation", fallbackMethod = "fallbackSave")
-    private void saveWithCircuitBreaker(ContactsClientData incomingData) {
+    private void save(ContactsClientData incomingData) {
         ClientEntity entity = new ClientEntity(
                 incomingData.clientId(),
                 incomingData.personalInfo(),
